@@ -58,28 +58,30 @@ const submitForm = async () => {
       ElMessage.error('请完成所有必填项')
       return false
     }
-
+    const tksKey = localStorage.getItem('tks') || ''
     try {
       const res = await axios.post('http://47.108.172.140:9001/ans250416/register', {
         name: formData.name,
         phone: formData.phone,
-        team: formData.team
+        team: formData.team,
+        tks: tksKey
       })
 
       if (res.data.code === 200) {
         const { user_id } = res.data.data
         const teamLabel = teamOptions.value.find(item => item.value === formData.team)?.label || '未知队伍'
-
+    
         // 本地存储
-        localStorage.setItem('userInfo', JSON.stringify({
+        localStorage.setItem('userInfo_' + tksKey, JSON.stringify({
           user_id,
           name: formData.name,
           phone: formData.phone,
           team: formData.team,
+          tks: tksKey,
           teamLabel,
           registerTime: new Date().toISOString()
         }))
-        localStorage.setItem('quizStarted', 'true')
+        localStorage.setItem('quizStarted_' + tksKey, 'true')
 
         ElMessage.success('注册成功，即将进入答题页面')
         setTimeout(() => {

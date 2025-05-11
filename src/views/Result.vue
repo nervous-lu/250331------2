@@ -7,7 +7,8 @@ import axios from 'axios'
 const router = useRouter()
 
 // 从本地存储获取用户信息
-const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+const tksKey = localStorage.getItem('tks') || ''
+const userInfo = JSON.parse(localStorage.getItem('userInfo_' + tksKey) || '{}')
 
 // 答题结果（得分、用时、正确题数等）
 const userData = ref({
@@ -29,7 +30,8 @@ const fetchRankInfo = async () => {
     resultData.loading = true
     const response = await axios.get('http://47.108.172.140:9001/ans250416/leaderboard', {
       params: {
-        user_id: userInfo.phone
+        user_id: userInfo.phone,
+        tks: tksKey
       }
     })
 
@@ -72,13 +74,10 @@ onMounted(() => {
 
       <div class="result-content" style="max-width: 500px; margin: 0 auto;">
         <div class="user-info-container">
-          <div class="user-avatar">
-            <span>{{ userInfo.name?.substring(0, 1) || '用' }}</span>
-          </div>
           <div class="user-details">
             <h3>{{ userInfo.name || '未知用户' }}</h3>
             <span class="team-badge">
-              {{ userInfo.team_label || userInfo.teamLabel || '未选择队伍' }}
+              支持队伍：{{ userInfo.team_label || userInfo.teamLabel || '未选择队伍' }}
             </span>
           </div>
         </div>

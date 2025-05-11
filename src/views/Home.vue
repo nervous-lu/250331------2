@@ -3,18 +3,39 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 
+const tks = ref('')
 const router = useRouter()
 // 活动时间
 const activityTime = ref({
   start: '',
-  end: ''
+  end: '',
+  ans_time: 60 // 默认值，实际以接口为准
 })
+
+// 格式化答题时长（秒转分钟或秒）
+const formatAnsTime = (seconds) => {
+  if (!seconds || isNaN(seconds)) return ''
+  if (seconds % 60 === 0) {
+    return `${seconds / 60}分钟`
+  } else if (seconds > 60) {
+    return `${Math.floor(seconds / 60)}分${seconds % 60}秒`
+  } else {
+    return `${seconds}秒`
+  }
+}
 
 // 获取活动时间
 const fetchActivityTime = async () => {
   try {
     const response = await axios.get('http://47.108.172.140:9001/ans250416/activity-time')
     activityTime.value = response.data.data
+    if (response.data.data.tks) {
+      tks.value = response.data.data.tks
+      localStorage.setItem('tks', tks.value)
+    }
+    if (response.data.data.ans_time) {
+      localStorage.setItem('ans_time_' + tks.value, response.data.data.ans_time)
+    }
   } catch (error) {
     console.error('获取活动时间失败:', error)
   }
@@ -23,7 +44,8 @@ const fetchActivityTime = async () => {
 // 检查用户是否已完成答题
 const checkQuizStatus = async () => {
 
-  const userInfo = localStorage.getItem('userInfo')
+  const tksKey = tks.value || localStorage.getItem('tks') || ''
+  const userInfo = localStorage.getItem('userInfo_' + tksKey)
   let userInfoItem = null
   let completedQuiz = false
 
@@ -48,7 +70,7 @@ const checkQuizStatus = async () => {
     return true
   } else if (userInfo) {
     // 用户已注册但未完成答题，检查是否已开始答题
-    const quizStarted = localStorage.getItem('quizStarted')
+    const quizStarted = localStorage.getItem('quizStarted_' + tksKey)
     if (quizStarted) {
       // 用户已开始答题但未完成，跳转到答题页面继续
       router.push('/quiz')
@@ -81,12 +103,16 @@ const startActivity = async () => {
   // 等待检查用户状态完成
   const hasStatus = await checkQuizStatus()
   if (!hasStatus) {
-    router.push('/register')
+    // 跳转到注册页面时也将答题时长传递过去
+    router.push({ path: '/register', query: { ans_time: activityTime.value.ans_time } })
+  } else {
+    // 跳转到答题页面时也将答题时长传递过去
+    router.push({ path: '/quiz', query: { ans_time: activityTime.value.ans_time } })
   }
 }
 
-onMounted(() => {
-  fetchActivityTime()
+onMounted(async () => {
+  await fetchActivityTime()
   // 页面加载时检查用户状态
   checkQuizStatus()
 })
@@ -106,7 +132,7 @@ onMounted(() => {
         <p>活动规则：</p>
         <ul>
           <li>选择您支持的队伍并填写基本信息</li>
-          <li>回答20道题目，限时1分钟</li>
+          <li>回答20道题目，限时{{ formatAnsTime(activityTime.ans_time) }}</li>
           <li>时间结束后将自动提交答案</li>
           <li>每位参与者只能参加一次</li>
           <li>根据得分情况进行排名</li>

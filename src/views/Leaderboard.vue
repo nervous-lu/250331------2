@@ -6,7 +6,9 @@ import axios from 'axios'
 
 
 // 获取用户信息
-const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+const tksKey = localStorage.getItem('tks') || ''
+const userInfo = JSON.parse(localStorage.getItem('userInfo_' + tksKey) || '{}')
+
 const router = useRouter()
 
 const leaderboardData = reactive({
@@ -19,7 +21,7 @@ const fetchLeaderboard = async () => {
   leaderboardData.loading = true
   try {
     const res = await axios.get('http://47.108.172.140:9001/ans250416/leaderboard', {
-      params: { user_id: userInfo.phone }
+      params: { user_id: userInfo.phone, tks: tksKey }
     })
 
     const { leaderboard, current_user_rank } = res.data?.data || {}
@@ -138,20 +140,22 @@ onMounted(fetchLeaderboard)
 }
 
 .header-item {
+  font-size: 14px;
   padding: 0 10px;
 }
 
-.header-item.rank { width: 15%; text-align: center; }
-.header-item.name { width: 30%; }
+.header-item.rank { width: 17%; text-align: center; }
+.header-item.name { width: 26%; }
 .header-item.team { width: 25%; }
-.header-item.score { width: 15%; text-align: right; }
-.header-item.time { width: 15%; text-align: right; }
+.header-item.score { width: 17%; text-align: right; }
+.header-item.time { width: 17%; text-align: right; }
 
 .leaderboard-list {
   min-height: 300px;
 }
 
 .leaderboard-item {
+  font-size: 12px;
   display: flex;
   align-items: center;
   padding: 10px 0;
@@ -166,11 +170,11 @@ onMounted(fetchLeaderboard)
   padding: 0 10px;
 }
 
-.item-rank { width: 15%; text-align: center; }
-.item-name { width: 30%; }
+.item-rank { width: 17%; text-align: center; }
+.item-name { width: 26%; }
 .item-team { width: 25%; }
-.item-score { width: 15%; text-align: right; }
-.item-time { width: 15%; text-align: right; color: #999; }
+.item-score { width: 17%; text-align: right; }
+.item-time { width: 17%; text-align: right; color: #999; }
 
 .current-user {
   background-color: #e8f4ff;

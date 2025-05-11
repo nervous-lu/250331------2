@@ -6,16 +6,18 @@ import axios from 'axios'
 
 const router = useRouter()
 
-const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+const tksKey = localStorage.getItem('tks') || ''
+const userInfo = JSON.parse(localStorage.getItem('userInfo_' + tksKey) || '{}')
 
 
 // 答题状态
+const ansTime = Number(localStorage.getItem('ans_time_' + tksKey)) || 300
 const quizState = reactive({
   loading: true,
   submitting: false,
-  timeRemaining: 60, // 秒
+  timeRemaining: ansTime, // 秒，统一用后端配置
   questions: [],
-  answers: {},
+  answers: {},   
   timer: null,
   currentQuestionIndex: 0
 })
@@ -27,13 +29,32 @@ const fetchQuestions = async () => {
     const response = await axios.get('http://47.108.172.140:9001/ans250416/questions')
     const rawList = response.data.data
 
-    quizState.questions = rawList.map((q, index) => ({
-      id: q.id,
-      content: q.question,
-      options: JSON.parse(q.options),
-      correctAnswer: q.correct_answer,
-      score: q.score
-    }))
+    quizState.questions = rawList.map((q, index) => {
+      let optionsArr
+      try {
+        const parsedOptions = JSON.parse(q.options)
+        if (Array.isArray(parsedOptions)) {
+          optionsArr = parsedOptions
+        } else if (parsedOptions && typeof parsedOptions === 'object') {
+          // 对象转为数组，顺序按键名A/B/C/D排序
+          optionsArr = Object.keys(parsedOptions).sort().map(key => parsedOptions[key])
+        } else {
+          console.error('options 不是数组或对象', q.options, q)
+          optionsArr = []
+        }
+      } catch (e) {
+        console.error('options 解析失败', q.options, q)
+        optionsArr = []
+      }
+      return {
+        id: q.id,
+        content: q.question,
+        options: optionsArr,
+        correctAnswer: q.correct_answer,
+        isMultiple: (q.correct_answer && q.correct_answer.length > 1),
+        score: q.score
+      }
+    })
 
     quizState.loading = false
     startTimer()
@@ -52,7 +73,20 @@ const selectAnswer = (questionId, answerText) => {
 
   if (index !== -1) {
     const answerLetter = String.fromCharCode(65 + index) // A = 65
-    quizState.answers[questionId] = answerLetter
+    if (question.isMultiple) {
+      if (!quizState.answers[questionId]) {
+        quizState.answers[questionId] = []
+      }
+      const currentAnswers = quizState.answers[questionId]
+      const answerIndex = currentAnswers.indexOf(answerLetter)
+      if (answerIndex === -1) {
+        currentAnswers.push(answerLetter)
+      } else {
+        currentAnswers.splice(answerIndex, 1)
+      }
+    } else {
+      quizState.answers[questionId] = answerLetter
+    }
   }
 }
 
@@ -100,32 +134,42 @@ const submitAnswers = async (isTimeout = false) => {
 
     let correctCount = 0
     quizState.questions.forEach(question => {
-      if (quizState.answers[question.id] === question.correctAnswer) {
+      if (question.isMultiple) {
+        const correctAnswers = question.correctAnswer.split('').sort()
+        const userAnswers = (quizState.answers[question.id] || []).slice().sort()
+        if (
+          correctAnswers.length === userAnswers.length &&
+          correctAnswers.every((a, i) => a === userAnswers[i])
+        ) {
+          correctCount++
+        }
+      } else if (quizState.answers[question.id] === question.correctAnswer) {
         correctCount++
       }
     })
 
     const score = Math.round((correctCount / quizState.questions.length) * 100)
 
-    localStorage.setItem('quizResult', JSON.stringify({
-      score,
-      correctCount,
-      totalQuestions: quizState.questions.length,
-      timeUsed: 60 - quizState.timeRemaining,
-      submitTime: new Date().toISOString(),
-      isTimeout
-    }))
+    // localStorage.setItem('quizResult_' + tksKey, JSON.stringify({
+    //   score,
+    //   correctCount,
+    //   totalQuestions: quizState.questions.length,
+    //   timeUsed: ansTime - quizState.timeRemaining,
+    //   submitTime: new Date().toISOString(),
+    //   isTimeout
+    // }))
 
     const response = await axios.post('http://47.108.172.140:9001/ans250416/submitResult', {
       user_id: userInfo.phone,
       team: userInfo.team,
       answers: quizState.answers,
+      tks: tksKey,
       score,
       correct_count: correctCount,
-      time_used: 60 - quizState.timeRemaining
+      time_used: ansTime - quizState.timeRemaining
     })
 
-    localStorage.setItem('quizResult', JSON.stringify(response.data))
+    localStorage.setItem('quizResult_' + tksKey, JSON.stringify(response.data))
     ElMessage.success(isTimeout ? '时间到，已自动提交答案' : '提交成功')
     router.push('/result')
   } catch (error) {
@@ -165,7 +209,6 @@ onBeforeUnmount(() => {
       <div class="quiz-info">
         <div class="user-info">
           <span>{{ userInfo.name }}</span>
-          <span class="team-badge" :class="`team-${userInfo.team}`">{{ userInfo.teamLabel }}</span>
         </div>
         <div class="timer" :class="{ 'warning': quizState.timeRemaining <= 10 }">
           <i class="el-icon-time"></i>
@@ -188,7 +231,12 @@ onBeforeUnmount(() => {
       <div class="card question-card">
         <div class="question-header">
           <span class="question-number">{{ quizState.currentQuestionIndex + 1 }}/{{ quizState.questions.length }}</span>
-          <h3 class="question-title">{{ quizState.questions[quizState.currentQuestionIndex].content }}</h3>
+          <span class="question-type" :class="quizState.questions[quizState.currentQuestionIndex].isMultiple ? 'multiple' : 'single'">
+            {{ quizState.questions[quizState.currentQuestionIndex].isMultiple ? '多选' : '单选' }}
+          </span>
+        </div>
+        <div class="question-title">
+          {{ quizState.questions[quizState.currentQuestionIndex].content }}
         </div>
         <div class="options-container">
           <div 
@@ -196,7 +244,7 @@ onBeforeUnmount(() => {
             :key="index"
             class="option-item"
             :class="{ 
-  'selected': quizState.answers[quizState.questions[quizState.currentQuestionIndex].id] 
+  'selected': quizState.questions[quizState.currentQuestionIndex].isMultiple ? (quizState.answers[quizState.questions[quizState.currentQuestionIndex].id] || []).includes(String.fromCharCode(65 + index)) : quizState.answers[quizState.questions[quizState.currentQuestionIndex].id] 
     === String.fromCharCode(65 + index) 
 }"
 
@@ -344,6 +392,22 @@ onBeforeUnmount(() => {
   align-items: center;
 }
 
+.question-type {
+  margin-left: 12px;
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  background-color: #6366f1;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+.question-type.single {
+  background-color: #3b82f6;
+}
+.question-type.multiple {
+  background-color: #f59e42;
+}
 .question-number {
   background-color: #3b82f6;
   padding: 6px 12px;
