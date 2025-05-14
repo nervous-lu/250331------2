@@ -13,7 +13,7 @@ const teamLoading = ref(false)
 const fetchTeamOptions = async () => {
   teamLoading.value = true
   try {
-    const res = await axios.get('http://47.108.172.140:9001/ans250416/teams')
+    const res = await axios.get('https://jcflans.z227.com/ans250416/teams')
     if (res.data.code === 200) {
       teamOptions.value = res.data.data.map(item => ({
         label: item.label,
@@ -60,7 +60,7 @@ const submitForm = async () => {
     }
     const tksKey = localStorage.getItem('tks') || ''
     try {
-      const res = await axios.post('http://47.108.172.140:9001/ans250416/register', {
+      const res = await axios.post('https://jcflans.z227.com/ans250416/register', {
         name: formData.name,
         phone: formData.phone,
         team: formData.team,

@@ -27,7 +27,7 @@ const formatAnsTime = (seconds) => {
 // 获取活动时间
 const fetchActivityTime = async () => {
   try {
-    const response = await axios.get('http://47.108.172.140:9001/ans250416/activity-time')
+    const response = await axios.get('https://jcflans.z227.com/ans250416/activity-time')
     activityTime.value = response.data.data
     if (response.data.data.tks) {
       tks.value = response.data.data.tks
@@ -52,7 +52,7 @@ const checkQuizStatus = async () => {
   if (userInfo) {
     try {
       userInfoItem = JSON.parse(userInfo)
-      const res = await axios.get('http://47.108.172.140:9001/ans250416/checkQuizCompleted', {
+      const res = await axios.get('https://jcflans.z227.com/ans250416/checkQuizCompleted', {
         params: {
           user_id: userInfoItem.phone
         }

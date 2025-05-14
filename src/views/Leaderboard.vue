@@ -20,7 +20,7 @@ const leaderboardData = reactive({
 const fetchLeaderboard = async () => {
   leaderboardData.loading = true
   try {
-    const res = await axios.get('http://47.108.172.140:9001/ans250416/leaderboard', {
+    const res = await axios.get('https://jcflans.z227.com/ans250416/leaderboard', {
       params: { user_id: userInfo.phone, tks: tksKey }
     })
 

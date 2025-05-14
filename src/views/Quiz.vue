@@ -26,7 +26,7 @@ const quizState = reactive({
 // 获取题目数据
 const fetchQuestions = async () => {
   try {
-    const response = await axios.get('http://47.108.172.140:9001/ans250416/questions')
+    const response = await axios.get('https://jcflans.z227.com/ans250416/questions')
     const rawList = response.data.data
 
     quizState.questions = rawList.map((q, index) => {
@@ -159,7 +159,7 @@ const submitAnswers = async (isTimeout = false) => {
     //   isTimeout
     // }))
 
-    const response = await axios.post('http://47.108.172.140:9001/ans250416/submitResult', {
+    const response = await axios.post('https://jcflans.z227.com/ans250416/submitResult', {
       user_id: userInfo.phone,
       team: userInfo.team,
       answers: quizState.answers,

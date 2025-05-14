@@ -56,7 +56,7 @@ router.beforeEach(async (to, from, next) => {
   if (userInfo) {
     try {
       userInfoItem = JSON.parse(userInfo)
-      const res = await axios.get('http://47.108.172.140:9001/ans250416/checkQuizCompleted', {
+      const res = await axios.get('https://jcflans.z227.com/ans250416/checkQuizCompleted', {
         params: {
           user_id: userInfoItem.phone,
           tks: userInfoItem.tks

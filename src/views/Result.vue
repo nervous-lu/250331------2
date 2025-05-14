@@ -28,7 +28,7 @@ const resultData = reactive({
 const fetchRankInfo = async () => {
   try {
     resultData.loading = true
-    const response = await axios.get('http://47.108.172.140:9001/ans250416/leaderboard', {
+    const response = await axios.get('https://jcflans.z227.com/ans250416/leaderboard', {
       params: {
         user_id: userInfo.phone,
         tks: tksKey
